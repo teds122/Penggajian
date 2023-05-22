@@ -1,68 +1,53 @@
 import streamlit as st
 import sqlite3
+import pandas as pd
 
-# Membuat koneksi ke database
-conn = sqlite3.connect('payroll.db')
+# Fungsi untuk membuat tabel gaji
+def create_table():
+    conn = sqlite3.connect('penggajian.db')
+    c = conn.cursor()
+    c.execute('''
+        CREATE TABLE IF NOT EXISTS gaji (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            nama TEXT,
+            posisi TEXT,
+            gaji INTEGER
+        )
+    ''')
+    conn.commit()
+    conn.close()
 
-# Membuat kursor
-cursor = conn.cursor()
+# Fungsi untuk menambahkan data gaji
+def add_data(nama, posisi, gaji):
+    conn = sqlite3.connect('penggajian.db')
+    c = conn.cursor()
+    c.execute('INSERT INTO gaji (nama, posisi, gaji) VALUES (?, ?, ?)', (nama, posisi, gaji))
+    conn.commit()
+    conn.close()
+
+# Fungsi untuk mengambil data gaji
+def get_data():
+    conn = sqlite3.connect('penggajian.db')
+    df = pd.read_sql_query('SELECT * FROM gaji', conn)
+    conn.close()
+    return df
 
 # Membuat tabel jika belum ada
-cursor.execute('''
-    CREATE TABLE IF NOT EXISTS employees (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        name TEXT NOT NULL,
-        position TEXT NOT NULL,
-        salary INTEGER NOT NULL
-    )
-''')
+create_table()
 
-# Fungsi untuk menambahkan data pegawai
-def add_employee(name, position, salary):
-    cursor.execute("INSERT INTO employees (name, position, salary) VALUES (?, ?, ?)", (name, position, salary))
-    conn.commit()
+# Judul aplikasi
+st.title('Aplikasi Penggajian')
 
-# Fungsi untuk mengambil data pegawai
-def get_employees():
-    cursor.execute("SELECT * FROM employees")
-    rows = cursor.fetchall()
-    return rows
+# Menampilkan form untuk input data
+nama = st.text_input('Nama')
+posisi = st.text_input('Posisi')
+gaji = st.number_input('Gaji')
 
-# Fungsi untuk menghitung total gaji
-def calculate_total_salary():
-    cursor.execute("SELECT SUM(salary) FROM employees")
-    total_salary = cursor.fetchone()[0]
-    return total_salary
+# Tombol untuk menambahkan data
+if st.button('Tambahkan Data'):
+    add_data(nama, posisi, gaji)
+    st.success('Data telah ditambahkan.')
 
-# Tampilan aplikasi dengan Streamlit
-def main():
-    st.title("Aplikasi Penggajian")
-
-    # Menambahkan data pegawai
-    st.header("Tambah Pegawai")
-    emp_name = st.text_input("Nama Pegawai")
-    emp_position = st.text_input("Posisi Pegawai")
-    emp_salary = st.number_input("Gaji Pegawai", min_value=0)
-    if st.button("Tambah"):
-        add_employee(emp_name, emp_position, emp_salary)
-        st.success("Pegawai ditambahkan!")
-
-    # Menampilkan data pegawai
-    st.header("Data Pegawai")
-    employees = get_employees()
-    for emp in employees:
-        st.write(f"Nama: {emp[1]}")
-        st.write(f"Posisi: {emp[2]}")
-        st.write(f"Gaji: {emp[3]}")
-        st.write("---")
-
-    # Menampilkan total gaji
-    total_salary = calculate_total_salary()
-    st.header("Total Gaji")
-    st.write(f"Total: {total_salary}")
-
-if __name__ == "__main__":
-    main()
-
-# Menutup koneksi
-conn.close()
+# Menampilkan tabel data gaji
+df = get_data()
+st.dataframe(df)
